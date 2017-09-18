@@ -16,9 +16,8 @@ library(stm)
 setwd("~/Box Sync/mpc/datafordemocracy/debate2016analysis/")
 load("debateSpeech2016Sentiment.RData")
 
-# subsetting the corpus
-hrccorpus <- corpus_subset(debate16corpus, speaker=="HRC")
-djtcorpus <- corpus_subset(debate16corpus, speaker=="DJT")
+# subset for just HRC, DJT
+candcorpus <- corpus_subset(debate16corpus, speaker=="HRC" | speaker=="DJT")
 
 
 #########################
@@ -26,36 +25,27 @@ djtcorpus <- corpus_subset(debate16corpus, speaker=="DJT")
 # (quanteda)
 #########################
 ### key words in context
-kwic(hrccorpus, "terror", 3) 
-kwic(djtcorpus, "terror", 3)
+kwic(corpus_subset(candcorpus, speaker=="HRC"), "immig", 4, "regex") 
+kwic(corpus_subset(candcorpus, speaker=="DJT"), "immig", 4, "regex")
 
-kwic(hrccorpus, "family", 3)
-kwic(djtcorpus, "family", 3)
+kwic(corpus_subset(candcorpus, speaker=="HRC"), "family", 4)
+kwic(corpus_subset(candcorpus, speaker=="DJT"), "family", 4)
 
-kwic(hrccorpus, "hands", 3)
-kwic(djtcorpus, "hands", 3)
+kwic(corpus_subset(candcorpus, speaker=="HRC"), "hands", 3)
+kwic(corpus_subset(candcorpus, speaker=="DJT"), "hands", 3)
 
 ### frequent words
 # create document feature matrix
-hrcdfm1 <- dfm(hrccorpus, 
-               remove = c(stopwords("english"), 
-                          "applause", "laughter", "crosstalk", "laughther"),
+otherStop("applause", "laughter", "crosstalk", "laughther")
+debatedfm <- dfm(candcorpus, 
+               remove = c(stopwords("english"), otherStop),
                remove_punct = TRUE,
                remove_numbers = TRUE,
                verbose = TRUE)
-hrcdfm1
-
-djtdfm1 <- dfm(djtcorpus, 
-               remove = c(stopwords("english"), 
-                          "applause", "laughter", "crosstalk", "laughther"),
-               remove_punct = TRUE,
-               remove_numbers = TRUE,
-               verbose= TRUE)
-djtdfm1
+debatedfm
 
 # most frequent terms
-topfeatures(hrcdfm1, 20) 
-topfeatures(djtdfm1, 20)
+topfeatures(debatedfm, n = 25, groups = "speaker")
 
 # setting up for figures
 debatedfm <- rbind(hrcdfm1, djtdfm1) # bind dfms
@@ -101,7 +91,7 @@ comparison.cloud(d, max.words=200,
 ######################
 # Create DFM
 debateDfm2 <- dfm(debate16corpus, 
-               remove = c(stopwords("english"), "applause", "laughter", "crosstalk", "laughther"),
+               remove = c(stopwords("english"), otherStop),
                remove_punct= TRUE,
                remove_numbers = TRUE,
                stem = TRUE)
@@ -148,14 +138,14 @@ p + geom_text()
 #################################
 debateDocVars <- docvars(debate16corpus)
 debateDocVars$speech <- debates16$speech
-stopReduced <- stopwords("english")[c(30:174)]
 moderators <- c("chris", "anderson", "martha", "lester", "elaine")
 debatedfm <- dfm(debate16corpus, 
-                 remove = c(stopwords("english"), moderators, "applause", "laughter", "crosstalk", "laughther"),
+                 remove = c(stopwords("english"), moderators, otherStop),
                  remove_punct = TRUE,
                  stem = TRUE)
 debatedfm
 debatedfm <- dfm_trim(debatedfm, min_count = 2)
+
 debOut <- convert(debatedfm, to = "stm", 
                   docvars = debateDocVars)
 
@@ -172,10 +162,10 @@ debFit25 <- stm(debOut$documents, debOut$vocab, K = 25,
               data = debOut$meta, init.type = "Spectral")
 
 ## Examine
-# Topic prevalence
-plot(debFit25, type = "summary", labeltype="frex")
 # Topic quality
 topicQuality(debFit25, debOut$documents)
+# Topic prevalence
+plot(debFit25, type = "summary", labeltype="frex")
 # Topic top words
 labelTopics(debFit25)
 # Topic prevalence by covariates
@@ -193,7 +183,7 @@ plot(debEffect25, covariate = "party", topics = 1, xlim=c(-0.2, 0.5),
 library(LDAvis)
 library(servr)
 
-toLDAvis(mod=debFit25, docs=debOut$documents) # in window
+# toLDAvis(mod=debFit25, docs=debOut$documents) # in window
 toLDAvis(debFit25, debOut$documents, R=20, out.dir = "debatesLDAvis", open.browser = FALSE) # webpage
 # See output: http://people.virginia.edu/~mpc8t/rhetoric2016/debatesLDAvis/
 
