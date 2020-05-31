@@ -65,7 +65,6 @@ for(i in seq(nrow(debates))) {
   sink() # close the file
 }
 
-
 ####################################
 # Create data frame with speech acts
 # of each candidate in each debate
